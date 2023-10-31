@@ -1,76 +1,82 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'dart:io';
-import 'dart:convert';
+import 'package:front_flutter_distribuidos/models/user.dart';
 import 'package:http/http.dart' as http;
 
 class UploadFileView extends StatefulWidget {
+  final User? usuario;
+
+  const UploadFileView({super.key, this.usuario});
   @override
   _UploadFileViewState createState() => _UploadFileViewState();
 }
 
 class _UploadFileViewState extends State<UploadFileView> {
-  List<PlatformFile> selectedFiles = [];
-  String errorMessage = '';
+  PlatformFile? selectedFile;
+  File? selectedFile_File;
 
-  Future<void> uploadFiles() async {
-    if (selectedFiles.isEmpty) {
+  void selectFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    var archivo = result!.files.first;
+    if (result != null) {
       setState(() {
-        errorMessage = 'No se han seleccionado archivos.';
-      });
-      return;
-    }
-
-    // Convierte los archivos seleccionados en listas de bytes
-    List<List<int>> fileDataList = [];
-    for (var file in selectedFiles) {
-      fileDataList.add(file.bytes!);
-    }
-
-    // Crea una lista de base64 codificada de las listas de bytes
-    List<String> base64DataList = fileDataList.map((bytes) {
-      return base64Encode(bytes);
-    }).toList();
-
-    // Construye el cuerpo de la solicitud
-    final url = 'https://tu-servidor-java/file/uploadFile'; // Reemplaza con la URL correcta
-    final body = jsonEncode({
-      "name": "nombre_archivo", // Reemplaza con el nombre de archivo deseado
-      "path": "ruta_archivo", // Reemplaza con la ruta de archivo deseada
-      "fileData": base64DataList,
-      "size": 0.0, // Ajusta el tamaño del archivo si es necesario
-      "userId": 1, // Reemplaza con el ID del usuario
-      "folderId": 1, // Reemplaza con el ID de la carpeta
-      "nodeId": 1, // Reemplaza con el ID del nodo
-    });
-
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
-
-    if (response.statusCode == 200) {
-      setState(() {
-        errorMessage = 'Archivos subidos exitosamente.';
-      });
-    } else {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      final String errorDetails = responseData['msg']['details'];
-      setState(() {
-        errorMessage = errorDetails;
+        selectedFile = PlatformFile(path: archivo.path,name: archivo.name, size: archivo.size);
       });
     }
   }
+/*
+  Future<void> pickAndUploadFile() async {
+    File? selectedFile;
 
-  Future<void> selectFiles() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
+      if (result != null) {
+        final platformFile = result.files.first;
+        final uint8List = platformFile.bytes;
 
-    if (result != null) {
-      setState(() {
-        selectedFiles = result.files;
-        errorMessage = '';
-      });
+        // Convierte PlatformFile a File
+        selectedFile = File(platformFile.path!);
+        await selectedFile.writeAsBytes(uint8List!);
+      }
+    } catch (e) {
+      print("Error al seleccionar y convertir el archivo: $e");
+    }
+
+  }*/
+
+  Future<void> uploadFile() async {
+    if (selectedFile == null) {
+      print("DEBES SELECCIONAR UN ARCHIVO");
+      return;
+    }
+    setState(() {
+      selectedFile_File=selectedFile as File;
+    });
+
+    String url = 'http://10.0.2.2:1234/file/uploadFile'; // Reemplaza con la URL correcta
+
+    var request = http.MultipartRequest('POST', Uri.parse(url));
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file', // Nombre del campo en la solicitud
+        await selectedFile_File!.readAsBytes(),
+        filename: selectedFile_File!.path.split('/').last,
+      ),
+    );
+
+    try {
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        // El archivo se subió exitosamente, puedes manejar la respuesta del servidor aquí
+        print('Archivo subido exitosamente.');
+      } else {
+        // Manejar errores, por ejemplo, mostrar un mensaje de error
+        print('Error al subir el archivo: ${response.statusCode}');
+      }
+    } catch (e) {
+      // Manejar errores, por ejemplo, mostrar un mensaje de error
+      print('Error: $e');
     }
   }
 
@@ -78,27 +84,25 @@ class _UploadFileViewState extends State<UploadFileView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Subir Archivos'),
+        title: Text('Subir Archivo'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            if (selectedFile != null)
+              Text('Archivo seleccionado: ${selectedFile!.path}'),
             ElevatedButton(
-              onPressed: selectFiles,
-              child: Text('Seleccionar Archivos'),
+              onPressed: (){
+                //pickAndUploadFile();
+                selectFile;
+              },
+              child: Text('Seleccionar Archivo'),
             ),
-            if (selectedFiles.isNotEmpty)
-              Text('Archivos Seleccionados: ${selectedFiles.length}'),
             ElevatedButton(
-              onPressed: uploadFiles,
-              child: Text('Subir Archivos'),
+              onPressed: uploadFile,
+              child: Text('Subir Archivo'),
             ),
-            if (errorMessage.isNotEmpty)
-              Text(
-                errorMessage,
-                style: TextStyle(color: Colors.red),
-              ),
           ],
         ),
       ),

@@ -23,7 +23,7 @@ class _LoginViewState extends State<LoginView> {
 
   Future<String> getUserId() async {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('jwt_token')??'';
+      return prefs.getString('user_id')??'';
   }
 
   String errorMessage = '';
@@ -56,7 +56,7 @@ class _LoginViewState extends State<LoginView> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => HomeView(userId: user_id,), // Pasa el ID del usuario a HomeView
+          builder: (context) => HomeView(userId: user_id, email: email,), // Pasa el ID del usuario a HomeView
         ),
       );
 

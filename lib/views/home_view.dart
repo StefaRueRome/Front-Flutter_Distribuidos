@@ -2,37 +2,40 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:front_flutter_distribuidos/models/File.dart';
+
 import 'package:front_flutter_distribuidos/models/user.dart';
+import 'package:front_flutter_distribuidos/views/uploadFile_view.dart';
 import 'package:http/http.dart' as http;
 
 class HomeView extends StatefulWidget {
   final String userId;
   final User? usuario;
+  final String? email;
 
-  HomeView({required this.userId, this.usuario});
+  HomeView({required this.userId, this.usuario, this.email,});
 
   @override
   _HomeViewState createState() => _HomeViewState();
 }
 
 class _HomeViewState extends State<HomeView> {
-  List<File> files = []; // Lista de archivos
+  List<FileModel> FileModels = []; // Lista de archivos
 
-  Future<void> fetchFiles() async {
-    final url = 'http://10.0.2.2:1234/file/getFiles/${widget.userId}';
+  Future<void> fetchFileModels() async {
+    final url = 'http://10.0.2.2:1234/File/getFiles/${widget.userId}';
 
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseData = json.decode(response.body);
-      final List<dynamic> filesData = responseData['json'];
+      final List<dynamic> FileModelsData = responseData['json'];
 
-      final List<File> fetchedFiles = filesData
-          .map((data) => File.fromJson(data))
+      final List<FileModel> fetchedFileModels = FileModelsData
+          .map((data) => FileModel.fromJson(data))
           .toList();
 
       setState(() {
-        files = fetchedFiles;
+        FileModels = fetchedFileModels;
       });
     } else {
       print("Error al mostrar los archivos");
@@ -42,7 +45,7 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    fetchFiles();
+    fetchFileModels();
   }
 
   @override
@@ -51,15 +54,38 @@ class _HomeViewState extends State<HomeView> {
       appBar: AppBar(
         title: Text('Archivos de Usuario'),
       ),
-      body: files.isEmpty
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            UserAccountsDrawerHeader(
+              accountName: Text(widget.usuario?.name ?? 'Cuenta'),
+              accountEmail: Text(widget.email ?? 'usuario@example.com'),
+            ),
+            ListTile(
+              leading: Icon(Icons.upload),
+              title: Text('Subir Documento'),
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UploadFileView(usuario: widget.usuario,), // Pasa el ID del usuario a HomeView
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      body: FileModels.isEmpty
           ? Center(child: Text('El usuario no tiene archivos'))
           : ListView.builder(
-              itemCount: files.length,
+              itemCount: FileModels.length,
               itemBuilder: (context, index) {
-                final file = files[index];
+                final FileModel = FileModels[index];
                 return ListTile(
-                  title: Text(file.name),
-                  subtitle: Text('Tamaño: ${file.size} bytes'),
+                  title: Text(FileModel.name),
+                  subtitle: Text('Tamaño: ${FileModel.size} bytes'),
                 );
               },
             ),

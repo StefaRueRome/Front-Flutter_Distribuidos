@@ -1,16 +1,18 @@
-class File {
+import 'dart:typed_data';
+
+class FileModel{
   final int id;
   final String name;
   final String path;
   final List<int> fileData; 
-  final double size;
+  final int size;
   final int userId;
   final int folderId;
   final int nodeId;
   final int backNodeId;
   
 
-  File({
+  FileModel({
     required this.id,
     required this.name,
     required this.path,
@@ -23,9 +25,9 @@ class File {
     
   });
 
-  factory File.fromJson(Map<String, dynamic> json) {
+  factory FileModel.fromJson(Map<String, dynamic> json) {
     final List<int> fileData = (json['fileData'] as List).cast<int>();
-    return File(
+    return FileModel(
       id: json['id'],
       name: json['name'],
       path: json['path'],
